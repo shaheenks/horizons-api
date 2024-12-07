@@ -19,7 +19,7 @@ class Logger {
         log.error(logMessage);
     }
 
-    warn(msg: string, obj: Object) {
+    warn(msg: string, obj?: Object) {
         let logMessage = `${new Date().toISOString()} [WARNI] ${this.APP} ${msg}`
         this.logSpool.push(logMessage)
         
@@ -34,7 +34,7 @@ class Logger {
         log.info(logMessage);
     }
 
-    debug(msg: string, obj: Object) {
+    debug(msg: string, obj?: Object) {
         let logMessage = `${new Date().toISOString()} [DEBUG] ${this.APP} ${msg}`
         this.logSpool.push(logMessage)
         

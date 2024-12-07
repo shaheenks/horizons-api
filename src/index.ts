@@ -21,6 +21,9 @@ app.get('/logs', (_req: Request, res: Response) => res.send(logger.logs));
 import SmartApiRoute from "@routes/smart-api";
 app.use('/smartapi', SmartApiRoute)
 
+import UserRoute from "@routes/user";
+app.use('/user', UserRoute)
+
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
