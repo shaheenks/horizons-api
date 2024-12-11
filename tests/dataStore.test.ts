@@ -9,7 +9,7 @@ const smartApiService = new SmartApiService();
 //     .then(data => console.log())
 // })
 
-setTimeout(() => {
+// setTimeout(() => {
     // let basicHeaders = {
     //     'Content-Type': 'application/json',
     //     'Accept': 'application/json',
@@ -24,7 +24,7 @@ setTimeout(() => {
     // .then(result => dataStore.setUserKey("S90725", "xxxxxxxx"))
     // .then(result => dataStore.getUserAuth("S90725"))
     // smartApiService.buildHeader("S90725")
-    dataStore.getBasicHeaders()
-    .then((data: any) => console.log(data))
-    .catch((err: any) => console.log(err))
-}, 1500)
+//     dataStore.getBasicHeaders()
+//     .then((data: any) => console.log(data))
+//     .catch((err: any) => console.log(err))
+// }, 1500)

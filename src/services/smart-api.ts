@@ -1,21 +1,18 @@
 import axios, { AxiosResponse } from "axios";
-import InvalidInputParameters from "@utils/errors/invalid-input-parameters"
-import SmartApiError from "@utils/errors/smart-api-error";
-import ApiResponseBuilder from "@utils/model/api-response";
-import dataStore from "./data-store";
+import InvalidInputParameters from "@utils/errors/invalid-input-params"
+import InvalidHttpResponse from "@utils/errors/invalid-http-response";
 
 export default class SmartApiService {
-    private basicHeaders: any;
 
     private inputValidator(requiredKeys: string[], payload: Object) {
         return new Promise ((resolve, reject) => {
             if (!payload || typeof payload !== 'object' || !requiredKeys || !Array.isArray(requiredKeys)) {
-                reject(new ApiResponseBuilder(false, {}, 'Invalid input parameters at SMARTAPI'))
+                reject(new InvalidInputParameters('failed input validation - SmartAPI service'))
             }
             // Iterate through the list of keys
             for (const key of requiredKeys) {
                 if (!payload.hasOwnProperty(key)) {
-                    reject(new ApiResponseBuilder(false, {}, 'Invalid input parameters at SMARTAPI'))
+                    reject(new InvalidInputParameters('failed input validation - SmartAPI service'))
                 }
             }
             // If all keys are present, return true
@@ -26,8 +23,8 @@ export default class SmartApiService {
     private responseHandler = (response: AxiosResponse) => {
         // console.log(response)
         return new Promise((resolve, reject) => {
-            if (response.data.status) resolve(response.data)
-            else reject(new SmartApiError('Smart API returned error response', JSON.stringify(response.data)))
+            if (response.status == 200) resolve(response.data)
+            else reject(new InvalidHttpResponse('invalid HTTP response - SmartApi Service'))
         })
     }
 
@@ -132,20 +129,9 @@ export default class SmartApiService {
         })
     };
 
-    loadScripMaster() {
+    getScripMaster() {
         return axios.get(
             'https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json', 
-            {
-                validateStatus: (status) => {
-                    return status >= 200 && status < 300; 
-                }
-            }
-        )
-    }
-
-    getPublicIp() {
-        return axios.get(
-            'https://api.ipify.org?format=json',
             {
                 validateStatus: (status) => {
                     return status >= 200 && status < 300; 

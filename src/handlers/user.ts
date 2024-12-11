@@ -1,26 +1,32 @@
 import { Request, Response } from "express";
-
-import dataStore from "@services/data-store";
-
-import SmartApiService from "@services/smart-api"
-import { resolve } from "path";
-const smartApiService = new SmartApiService();
+import ApiResponseBuilder from "@utils/model/api-response";
+import UndefinedError from "@utils/errors/undefined-error";
+import appState from "@services/data-store/app-state";
+import dbAccess from "@services/data-store/db-access";
 
 export class UserHandler {
 
-    authorize(req: Request, res: Response) {
-        dataStore.fetchUserAuth(req.params.userid)
-        .then((data: any) => {
-            res.json(data)
-        })
-        .catch(err => res.status(500).json(err))
+    setApiKey(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+        dbAccess.updateOne("profiles", { clientcode: allParams.clientcode }, { privateKey: allParams.apiKey })
+        .then((data: any) => callback(null, {...data} ))
+        .catch(err => callback(err, {}))
     }
 
-    setApiKey(req: Request, res: Response) {
-        dataStore.setUserPrivateKey(req.params.userid, req.body.apiKey)
-        .then((data: any) => {
-            res.json(data)
-        })
-        .catch(err => res.status(500).json(err))
+    setHeaders(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+        dbAccess.updateOne("app-config", { key: "basic-headers" }, body)
+        .then((data: any) => callback(null, {...data} ))
+        .catch(err => callback(err, {}))
+    }
+
+    getFinalHeaders(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+        let response = appState.getHeaders(allParams.clientcode, true);
+        callback(null, response)
+    }
+
+    all(req: Request, res: Response) {
+        res.json(new ApiResponseBuilder(false, {}, new UndefinedError('ROUTE NOT FOUND')))
     }
 }

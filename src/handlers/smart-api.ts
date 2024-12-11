@@ -1,93 +1,111 @@
-import { Request, response, Response } from "express";
+import { Request, Response } from "express";
 
 import SmartApiService from "@services/smart-api"
-import dataStore from "@services/data-store";
-import InvalidInputParameters from "@utils/errors/invalid-input-parameters";
+import appState from "@services/data-store/app-state";
 import ApiResponseBuilder from "@utils/model/api-response";
+import UndefinedError from "@utils/errors/undefined-error";
+import dbAccess from "@services/data-store/db-access";
 const smartApiService = new SmartApiService();
 
 export class SmartApiHandler {
 
-    login(req: Request, res: Response) {
-        let params = {...req.query, ...req.body}
-        let finalHeaders = dataStore.getFinalHeaders(params.clientcode.toUpperCase(), true);
+    login(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
 
         let finalResponse: any
-        smartApiService.loginByPassword(finalHeaders, params)
+        smartApiService.loginByPassword(finalHeaders, body)
         .then((response: any) => {
-            finalResponse = response
-            return dataStore.setUserJwt(params.clientcode, response.data)
+            finalResponse = response.data
+            return dbAccess.updateOne("profiles", {clientcode: allParams.clientcode.toUpperCase()}, { auth: finalResponse })
         })
-        .then((response: any) => { return dataStore.authorize(params.clientcode) })
-        .then((response: any) => res.json(new ApiResponseBuilder(true, finalResponse.data)))
-        .catch(err => res.status(500).json({ message : 'Action failed - GET', err: err }))
+        .then((response: any) => { appState.bootstrap() })
+        .then((response: any) => callback(null, finalResponse))
+        .catch(err => callback(err, {}))
     }
 
-    profile(req: Request, res: Response) {
-        let params = {...req.query, ...req.body}
-        let finalHeaders = dataStore.getFinalHeaders(params.clientcode.toUpperCase(), true);
+    profile(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
         
         smartApiService.getProfile(finalHeaders)
-        .then((response: any) => res.json(new ApiResponseBuilder(true, response.data)))
-        .catch(err => res.status(500).json({ message : 'Action failed - GET', err: err }))
+        .then((response: any) => callback(null, response.data))
+        .catch(err => callback(err, {}))
     }
 
-    logout(req: Request, res: Response) {
-        let params = {...req.query, ...req.body}
-        let finalHeaders = dataStore.getFinalHeaders(params.clientcode.toUpperCase(), true);
+    logout(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
 
         let finalResponse: any
-        smartApiService.logout(finalHeaders, params)
+        smartApiService.logout(finalHeaders, allParams)
         .then((response: any) => {
             finalResponse = response
-            return dataStore.setUserJwt(params.clientcode, {jwtToken: '', refreshToken: '', feedToken: ''})
+            return dbAccess.updateOne("profiles", {clientcode: allParams.clientcode.toUpperCase()}, { auth: {jwtToken: '', refreshToken: '', feedToken: ''}})
         })
-        .then((response: any) => { return dataStore.authorize(params.clientcode) })
-        .then((response: any) => res.json(new ApiResponseBuilder(true, finalResponse.data)))
-        .catch(err => res.status(500).json({ message : 'Action failed - GET', err: err }))
+        .then((response: any) => callback(null, finalResponse.data ))
+        .catch(err => callback(err, {}))
     }
 
-    data(req: Request, res: Response) {
-        let params = {...req.query, ...req.body}
-        let finalHeaders = dataStore.getFinalHeaders(params.clientcode.toUpperCase(), true);
+    data(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
         
-        smartApiService.getCandleData(finalHeaders, req.body)
-        .then((response: any) => res.json(new ApiResponseBuilder(true, response.data)))
-        .catch(err => res.status(500).json({ message : 'Action failed - GET', err: err }))
+        smartApiService.getCandleData(finalHeaders, body)
+        .then((response: any) => callback(null, response.data ))
+        .catch(err => callback(err, {}))
     }
 
-    quote(req: Request, res: Response) {
-        let params = {...req.query, ...req.body}
-        let finalHeaders = dataStore.getFinalHeaders(params.clientcode.toUpperCase(), true);
+    quote(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
         
-        smartApiService.quote(finalHeaders, req.body)
-        .then((response: any) => res.json(new ApiResponseBuilder(true, response.data)))
-        .catch(err => res.status(500).json({ message : 'Action failed - GET', err: err }))
+        smartApiService.quote(finalHeaders, body)
+        .then((response: any) => callback(null, response.data ))
+        .catch(err => callback(err, {}))
     }
 
-    fetchData(req: Request, res: Response) {
-        let params = {...req.query, ...req.body}
-        let finalHeaders = dataStore.getFinalHeaders(params.clientcode.toUpperCase(), true);
-        let symbolData: any;
-        let finalResponse: any;
+    // fetchData(req: Request, res: Response) {
+    //     let params = {...req.query, ...req.body}
+    //     let finalHeaders = appState.getHeaders(params.clientcode.toUpperCase(), true);
+    //     let symbolData: any;
+    //     let finalResponse: any;
 
-        dataStore.getSymbolToken({token: params.symboltoken})
-        .then((symbol: any) => {
-            symbolData = {token: symbol.token, symbol: symbol.symbol, name: symbol.name, instrumenttype: symbol.instrumenttype, exch_seg: symbol.exch_seg, expiry: symbol.expiry}
-            return smartApiService.getCandleData(finalHeaders, req.body)
-            .then((response: any) => {
-                finalResponse = {data: response.data, ...symbolData, interval: req.body.interval}
-                return dataStore.saveIncomingRecord(finalResponse)
-                // return true
-            })
-            .then((result: any) => res.json(new ApiResponseBuilder(true, finalResponse)))
-            .catch((err: any) => res.json(new ApiResponseBuilder(false, {}, err)))
+    //     dbAccess.findOne("scrip-master", { token: params.symboltoken })
+    //     .then((symbol: any) => {
+    //         symbolData = {token: symbol.token, symbol: symbol.symbol, name: symbol.name, instrumenttype: symbol.instrumenttype, exch_seg: symbol.exch_seg, expiry: symbol.expiry}
+    //         return smartApiService.getCandleData(finalHeaders, req.body)
+    //         .then((response: any) => {
+    //             finalResponse = {data: response.data, ...symbolData, interval: req.body.interval}
+    //             return dbAccess.insertOne("incoming", finalResponse)
+    //             // return true
+    //         })
+    //         .then((result: any) => res.json(new ApiResponseBuilder(true, finalResponse)))
+    //         .catch((err: any) => res.json(new ApiResponseBuilder(false, {}, err)))
+    //     })
+    // }
+
+    symbol(params: any, query: any, body: any, callback: Function) {
+        let allParams = {...params, ...query, ...body}
+
+        dbAccess.findMany("scrip-master", allParams)
+        .then((response: any) => callback(null, response))
+        .catch(err => callback(err, {}))
+    }
+
+    loadMaster(callback: Function) {
+        dbAccess.deleteMany("scrip-master", {})
+        .then((response: any) => {
+            return smartApiService.getScripMaster()
         })
+        .then((response: any) => {
+            return dbAccess.insertMany("scrip-master", response.data)
+        })
+        .then((response: any) => callback(null, { insertedCount: response.insertedCount } ))
+        .catch(err => callback(err, {}))
     }
 
-    symbol(req: Request, res: Response) {
-        dataStore.getSymbolToken(req.body)
-        .then((data: any) => res.json(new ApiResponseBuilder(true, {token: data.token, symbol: data.symbol, name: data.name, instrumenttype: data.instrumenttype, exch_seg: data.exch_seg})))
-        .catch(err => res.status(500).json(new ApiResponseBuilder(false, {}, 'Data based fetch failed - SmartApi handler')))
+    all(req: Request, res: Response) {
+        res.json(new ApiResponseBuilder(false, {}, new UndefinedError('ROUTE NOT FOUND')))
     }
 }

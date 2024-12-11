@@ -1,29 +1,33 @@
-export default class ApiResponseBuilder {
-    status: boolean = false;
-    message: string = '';
-    errorCode: string | undefined = '';
-    data: any = {};
+import UndefinedError from "@utils/errors/undefined-error";
+import { logger } from "@utils/logger";
 
-    constructor(status: boolean, data: any, errorCode?: string) {
-        if (status) {
-            this.status = true;
-            this.message = 'SUCCESS'
-            this.errorCode = ''
+export default class ApiResponse {
+    success: boolean = false;
+    data: any = {};
+    error: any = {};
+
+    constructor(success: boolean, data: any, error?: Error | null, message?: string) {
+        let response: any = {}; 
+        if (success) {
+            this.success = success
             this.data = data
         } else {
-            this.status = false;
-            this.message = 'FAILED'
-            this.errorCode = errorCode
-            this.data = data
+            this.success = false;
+            this.data = data;
         }
-    }
 
-    toJson() {
-        return {
-            status: this.status,
-            message: this.message,
-            errorCode: this.errorCode,
-            data: this.data
+        if(error) {
+            this.error = {
+                name: error.name,
+                message: error.message
+            }
+            logger.debug(`ApiReponseBuilder`, error.stack);
+        } else if (data.message && success == false) {
+            let err = new UndefinedError(data.message)
+            this.error = {
+                name: err.name,
+                message: err.message
+            }
         }
     }
 }
