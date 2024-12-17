@@ -1,3 +1,5 @@
 dist
 node_modules
 .env
+src/.DS_store
+src/routes/.DS_Store

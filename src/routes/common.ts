@@ -4,7 +4,6 @@ const CommonRoute = express.Router();
 import { SmartApiHandler } from "@handlers/smart-api";
 const smartApiHandler = new SmartApiHandler();
 import ApiResponse from "@utils/model/api-response";
-import InvalidInputParameters from "@utils/errors/invalid-input-params";
 import validateRequestBody from "@utils/helpers/request-validator";
 
 const APP = process.env.APP || 'TEMPLATE';
@@ -24,21 +23,19 @@ CommonRoute.use((req, res, next) => {
 });
 
 const handleSymbol = (req: Request, res: Response) => {
-    if(validateRequestBody(req, validRoutes)) {
-        smartApiHandler.symbol(req.params, req.query, req.body, (err: Error, data: Object) => {
-            if(!err) res.json(new ApiResponse(true, data))
-            else res.json(new ApiResponse(false, {}, err))
-        })       
-    } else res.json(new ApiResponse(false, {}, new InvalidInputParameters('input validation failed')))
+    validateRequestBody(req, validRoutes)
+    .then(flag => smartApiHandler.symbol(req.params, req.query, req.body))
+    .then(data => res.json(new ApiResponse(true, data)))
+    .catch(err => res.status(404).json(new ApiResponse(false, {}, err)));
 };
 CommonRoute.get('/symbol/:token', handleSymbol)
 CommonRoute.post('/symbol', handleSymbol)
 
 CommonRoute.get('/load-master', (req: Request, res: Response) => {
-    smartApiHandler.loadMaster((err: Error, data: Object) => {
-        if(!err) res.json(new ApiResponse(true, data))
-        else res.json(new ApiResponse(false, {}, err))
-    })
+    validateRequestBody(req, validRoutes)
+    .then(flag => smartApiHandler.loadMaster())
+    .then(data => res.json(new ApiResponse(true, data)))
+    .catch(err => res.status(404).json(new ApiResponse(false, {}, err)));
 })
 
 CommonRoute.all('*', (req: Request, res: Response) => res.status(404).json(new ApiResponse(false, {}, null, 'ROUTE NOT FOUND')))

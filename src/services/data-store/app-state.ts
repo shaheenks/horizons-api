@@ -42,8 +42,13 @@ class AppState {
         })
     }
 
-    getProfile(code: string) {
-        return this._profiles[code]
+    getProfile(code?: string) {
+        if (code) return this._profiles[code]
+        else return this._profiles
+    }
+
+    get headers() {
+        return this._basicHeaders
     }
 
     getHeaders(code: string, auth: boolean) {

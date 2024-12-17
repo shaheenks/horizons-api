@@ -1,5 +1,4 @@
 import { expect, test } from "@jest/globals";
-import dataStore from "@services/data-store";
 
 import SmartApiService from "@services/smart-api";
 const smartApiService = new SmartApiService();

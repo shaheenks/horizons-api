@@ -22,8 +22,8 @@ export default class ApiResponse {
                 message: error.message
             }
             logger.debug(`ApiReponseBuilder`, error.stack);
-        } else if (data.message && success == false) {
-            let err = new UndefinedError(data.message)
+        } else if (data.message == null && success == false) {
+            let err = new UndefinedError(message)
             this.error = {
                 name: err.name,
                 message: err.message

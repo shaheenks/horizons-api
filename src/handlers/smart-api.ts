@@ -1,68 +1,75 @@
-import { Request, Response } from "express";
-
 import SmartApiService from "@services/smart-api"
 import appState from "@services/data-store/app-state";
-import ApiResponseBuilder from "@utils/model/api-response";
 import UndefinedError from "@utils/errors/undefined-error";
 import dbAccess from "@services/data-store/db-access";
 const smartApiService = new SmartApiService();
 
 export class SmartApiHandler {
 
-    login(params: any, query: any, body: any, callback: Function) {
+    login(params: any, query: any, body: any) {
         let allParams = {...params, ...query, ...body}
         let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
 
-        let finalResponse: any
-        smartApiService.loginByPassword(finalHeaders, body)
-        .then((response: any) => {
-            finalResponse = response.data
-            return dbAccess.updateOne("profiles", {clientcode: allParams.clientcode.toUpperCase()}, { auth: finalResponse })
+        return new Promise((resolve, reject) => {
+            let finalResponse: any
+            smartApiService.loginByPassword(finalHeaders, body)
+            .then((response: any) => {
+                finalResponse = response.data
+                return dbAccess.updateOne("profiles", {clientcode: allParams.clientcode.toUpperCase()}, { auth: finalResponse, ts: new Date().toISOString() })
+            })
+            .then((response: any) => { appState.bootstrap() })
+            .then((response: any) => resolve(finalResponse))
+            .catch(err => reject(err))
+        });
+    }
+
+    profile(params: any, query: any, body: any) {
+        let allParams = {...params, ...query, ...body}
+        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
+
+        return new Promise((resolve, reject) => {
+            smartApiService.getProfile(finalHeaders)
+            .then((response: any) => resolve(response.data))
+            .catch(err => reject(err))
         })
-        .then((response: any) => { appState.bootstrap() })
-        .then((response: any) => callback(null, finalResponse))
-        .catch(err => callback(err, {}))
     }
 
-    profile(params: any, query: any, body: any, callback: Function) {
-        let allParams = {...params, ...query, ...body}
-        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
-        
-        smartApiService.getProfile(finalHeaders)
-        .then((response: any) => callback(null, response.data))
-        .catch(err => callback(err, {}))
-    }
-
-    logout(params: any, query: any, body: any, callback: Function) {
+    logout(params: any, query: any, body: any) {
         let allParams = {...params, ...query, ...body}
         let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
 
-        let finalResponse: any
-        smartApiService.logout(finalHeaders, allParams)
-        .then((response: any) => {
-            finalResponse = response
-            return dbAccess.updateOne("profiles", {clientcode: allParams.clientcode.toUpperCase()}, { auth: {jwtToken: '', refreshToken: '', feedToken: ''}})
+        return new Promise((resolve, reject) => {
+            let finalResponse: any
+            smartApiService.logout(finalHeaders, allParams)
+            .then((response: any) => {
+                finalResponse = response
+                return dbAccess.updateOne("profiles", {clientcode: allParams.clientcode.toUpperCase()}, { auth: {jwtToken: '', refreshToken: '', feedToken: ''}})
+            })
+            .then((response: any) => resolve(finalResponse.data ))
+            .catch(err => reject(err))
+        });
+    }
+
+    data(params: any, query: any, body: any) {
+        let allParams = {...params, ...query, ...body}
+        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
+
+        return new Promise((resolve, reject) => {
+            smartApiService.getCandleData(finalHeaders, body)
+            .then((response: any) => resolve(response.data ))
+            .catch(err => reject(err))
+        });
+    }
+
+    quote(params: any, query: any, body: any) {
+        let allParams = {...params, ...query, ...body}
+        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
+
+        return new Promise((resolve, reject) => {
+            smartApiService.quote(finalHeaders, body)
+            .then((response: any) => resolve(response.data ))
+            .catch(err => reject(err))  
         })
-        .then((response: any) => callback(null, finalResponse.data ))
-        .catch(err => callback(err, {}))
-    }
-
-    data(params: any, query: any, body: any, callback: Function) {
-        let allParams = {...params, ...query, ...body}
-        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
-        
-        smartApiService.getCandleData(finalHeaders, body)
-        .then((response: any) => callback(null, response.data ))
-        .catch(err => callback(err, {}))
-    }
-
-    quote(params: any, query: any, body: any, callback: Function) {
-        let allParams = {...params, ...query, ...body}
-        let finalHeaders = appState.getHeaders(allParams.clientcode.toUpperCase(), true);
-        
-        smartApiService.quote(finalHeaders, body)
-        .then((response: any) => callback(null, response.data ))
-        .catch(err => callback(err, {}))
     }
 
     // fetchData(req: Request, res: Response) {
@@ -85,27 +92,34 @@ export class SmartApiHandler {
     //     })
     // }
 
-    symbol(params: any, query: any, body: any, callback: Function) {
-        let allParams = {...params, ...query, ...body}
+    symbol(params: any, query: any, body: any) {
+        let allParams = {...params, ...query, ...body};
 
-        dbAccess.findMany("scrip-master", allParams)
-        .then((response: any) => callback(null, response))
-        .catch(err => callback(err, {}))
+        return new Promise((resolve, reject) => {
+            dbAccess.findMany("scrip-master", allParams)
+            .then((response: any) => resolve(response))
+            .catch(err => reject(err))
+        })
     }
 
-    loadMaster(callback: Function) {
-        dbAccess.deleteMany("scrip-master", {})
-        .then((response: any) => {
-            return smartApiService.getScripMaster()
-        })
-        .then((response: any) => {
-            return dbAccess.insertMany("scrip-master", response.data)
-        })
-        .then((response: any) => callback(null, { insertedCount: response.insertedCount } ))
-        .catch(err => callback(err, {}))
+    loadMaster() {
+
+        return new Promise((resolve, reject) => {
+            dbAccess.deleteMany("scrip-master", {})
+            .then((response: any) => {
+                return smartApiService.getScripMaster()
+            })
+            .then((response: any) => {
+                return dbAccess.insertMany("scrip-master", response.data)
+            })
+            .then((response: any) => resolve({ insertedCount: response.insertedCount } ))
+            .catch(err => reject(err))
+            })
     }
 
-    all(req: Request, res: Response) {
-        res.json(new ApiResponseBuilder(false, {}, new UndefinedError('ROUTE NOT FOUND')))
+    all() {
+        return new Promise((resolve, reject) => {
+            reject(new UndefinedError('ROUTE NOT FOUND'))
+        })
     }
 }
